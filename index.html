@@ -59,9 +59,13 @@
                     <div class="form-group"> <label for="countdownTime">Countdown Time (seconds):</label> <input type="number" id="countdownTime" value="30" required> </div>
                 </fieldset>
                 <fieldset>
-                    <legend>File Cards (Max 4)</legend>
-                    <div id="fileCardsContainer"></div>
-                </fieldset>
+    <legend>File Cards (Unlimited)</legend>
+    <!-- Add New Card বাটনটি এখানে যুক্ত করা হয়েছে -->
+    <button type="button" id="addCardBtn" style="margin-bottom: 15px;">+ Add New Card</button>
+    <div id="fileCardsContainer">
+        <!-- কার্ডগুলো এখানে জাভাস্ক্রিপ্ট দিয়ে তৈরি হবে -->
+    </div>
+</fieldset>
                 <fieldset>
                     <legend>Footer</legend>
                     <div class="form-group"> <label for="footerText">Footer Text:</label> <input type="text" id="footerText" required> </div>
@@ -74,159 +78,195 @@
 
     <!-- Firebase v9 (modular) script -->
     <script type="module">
-        // Firebase v9 Modular Imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-        import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
+    // Firebase v9 Modular Imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+    import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
 
-        // --- START: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
-        const firebaseConfig = {
-  apiKey: "AIzaSyCQvwxezeFwUW-8iuGqKn6Vzx8fqA-lq8w",
-  authDomain: "learner-alom.firebaseapp.com",
-  databaseURL: "https://learner-alom-default-rtdb.firebaseio.com",
-  projectId: "learner-alom",
-  storageBucket: "learner-alom.appspot.com",
-  messagingSenderId: "812834864427",
-  appId: "1:812834864427:web:c1d1a2fc89c59c30cb596e"
-};
-        // --- END: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
+    // --- START: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCQvwxezeFwUW-8iuGqKn6Vzx8fqA-lq8w",
+      authDomain: "learner-alom.firebaseapp.com",
+      databaseURL: "https://learner-alom-default-rtdb.firebaseio.com",
+      projectId: "learner-alom",
+      storageBucket: "learner-alom.appspot.com",
+      messagingSenderId: "812834864427",
+      appId: "1:812834864427:web:c1d1a2fc89c59c30cb596e"
+    };
+    // --- END: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
 
-        // Firebase Initialization
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
-        const storage = getStorage(app);
+    // Firebase Initialization
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    const storage = getStorage(app);
 
-        // DOM Elements
-        const loginForm = document.getElementById('loginForm');
-        const adminPanel = document.getElementById('adminPanel');
-        const loginBtn = document.getElementById('loginBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const appForm = document.getElementById('appForm');
-        const loader = document.getElementById('loader');
+    // DOM Elements
+    const loginForm = document.getElementById('loginForm');
+    const adminPanel = document.getElementById('adminPanel');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const appForm = document.getElementById('appForm');
+    const loader = document.getElementById('loader');
+    const fileCardsContainer = document.getElementById('fileCardsContainer');
+    const addCardBtn = document.getElementById('addCardBtn');
 
-        // Check auth state
-        onAuthStateChanged(auth, user => {
-            if (user) {
-                loginForm.style.display = 'none';
-                adminPanel.style.display = 'block';
-                loadData();
-            } else {
-                loginForm.style.display = 'block';
-                adminPanel.style.display = 'none';
-            }
-        });
-
-        // Login
-        loginBtn.addEventListener('click', () => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            signInWithEmailAndPassword(auth, email, password)
-                .catch(error => {
-                    document.getElementById('loginError').textContent = error.message;
-                });
-        });
-
-        // Logout
-        logoutBtn.addEventListener('click', () => {
-            signOut(auth);
-        });
-        
-        // Generate File Card Inputs (no change needed here)
-        const fileCardsContainer = document.getElementById('fileCardsContainer');
-        for (let i = 1; i <= 4; i++) {
-            const cardDiv = document.createElement('div');
-            cardDiv.className = 'file-card-admin';
-            cardDiv.innerHTML = `
-                <h4>Card ${i}</h4>
-                <div class="form-group"><label>Title:</label><input type="text" id="cardTitle${i}"></div>
-                <div class="form-group"><label>Description:</label><textarea id="cardDesc${i}"></textarea></div>
-                <div class="form-group"><label>Download Link:</label><input type="url" id="cardLink${i}" placeholder="https://drive.google.com/..."></div>
-                <div class="form-group"><label>Image (URL or Upload):</label><input type="text" id="cardImgUrl${i}"><input type="file" id="cardImgUpload${i}" accept="image/*"></div>
-            `;
-            fileCardsContainer.appendChild(cardDiv);
+    // Check auth state
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            loginForm.style.display = 'none';
+            adminPanel.style.display = 'block';
+            loadData();
+        } else {
+            loginForm.style.display = 'block';
+            adminPanel.style.display = 'none';
         }
+    });
 
-        // Load data from Firebase
-        function loadData() {
-            const dataRef = ref(db, 'appData');
-            get(dataRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const data = snapshot.val();
-                    document.getElementById('profileName').value = data.profile?.name || '';
-                    document.getElementById('profileDesc').value = data.profile?.description || '';
-                    document.getElementById('profilePicUrl').value = data.profile?.imageUrl || '';
-                    document.getElementById('adCode').value = data.ads?.bannerCode || '';
-                    document.getElementById('slider1Url').value = data.slider?.slide1 || '';
-                    document.getElementById('slider2Url').value = data.slider?.slide2 || '';
-                    document.getElementById('slider3Url').value = data.slider?.slide3 || '';
-                    document.getElementById('requiredClicks').value = data.settings?.requiredClicks || 10;
-                    document.getElementById('countdownTime').value = data.settings?.countdownTime || 30;
-                    document.getElementById('footerText').value = data.footer?.text || '';
-                    for (let i = 1; i <= 4; i++) {
-                         if(data.fileCards && data.fileCards[`card${i}`]) {
-                            const card = data.fileCards[`card${i}`];
-                            document.getElementById(`cardTitle${i}`).value = card.title || '';
-                            document.getElementById(`cardDesc${i}`).value = card.description || '';
-                            document.getElementById(`cardLink${i}`).value = card.downloadLink || '';
-                            document.getElementById(`cardImgUrl${i}`).value = card.imageUrl || '';
-                         }
-                    }
+    // Login
+    loginBtn.addEventListener('click', () => {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        signInWithEmailAndPassword(auth, email, password)
+            .catch(error => {
+                document.getElementById('loginError').textContent = error.message;
+            });
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => {
+        signOut(auth);
+    });
+
+    // --- নতুন ফাংশন: একটি কার্ডের HTML তৈরি করার জন্য ---
+    function createFileCardHTML(cardData = {}, index) {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'file-card-admin';
+        cardDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h4>Card ${index + 1}</h4>
+                <button type="button" class="delete-card-btn" style="background: #e74c3c;">Delete</button>
+            </div>
+            <div class="form-group"><label>Title:</label><input type="text" class="card-title" value="${cardData.title || ''}"></div>
+            <div class="form-group"><label>Description:</label><textarea class="card-desc">${cardData.description || ''}</textarea></div>
+            <div class="form-group"><label>Download Link:</label><input type="url" class="card-link" value="${cardData.downloadLink || ''}" placeholder="https://drive.google.com/..."></div>
+            <div class="form-group">
+                <label>Image URL:</label>
+                <input type="text" class="card-img-url" value="${cardData.imageUrl || ''}">
+                <label style="margin-top: 5px;">Or Upload New Image:</label>
+                <input type="file" class="card-img-upload" accept="image/*">
+            </div>
+        `;
+        return cardDiv;
+    }
+    
+    // --- নতুন ফাংশন: একটি নতুন খালি কার্ড যুক্ত করার জন্য ---
+    addCardBtn.addEventListener('click', () => {
+        const cardCount = fileCardsContainer.getElementsByClassName('file-card-admin').length;
+        const newCard = createFileCardHTML({}, cardCount);
+        fileCardsContainer.appendChild(newCard);
+    });
+
+    // --- নতুন ফাংশন: কার্ড ডিলিট করার জন্য ---
+    fileCardsContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-card-btn')) {
+            // closest ব্যবহার করে কার্ডের মূল div খুঁজে বের করে রিমুভ করা হচ্ছে
+            e.target.closest('.file-card-admin').remove();
+        }
+    });
+
+    // Load data from Firebase
+    function loadData() {
+        const dataRef = ref(db, 'appData');
+        get(dataRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                document.getElementById('profileName').value = data.profile?.name || '';
+                document.getElementById('profileDesc').value = data.profile?.description || '';
+                document.getElementById('profilePicUrl').value = data.profile?.imageUrl || '';
+                document.getElementById('adCode').value = data.ads?.bannerCode || '';
+                document.getElementById('slider1Url').value = data.slider?.slide1 || '';
+                document.getElementById('slider2Url').value = data.slider?.slide2 || '';
+                document.getElementById('slider3Url').value = data.slider?.slide3 || '';
+                document.getElementById('requiredClicks').value = data.settings?.requiredClicks || 10;
+                document.getElementById('countdownTime').value = data.settings?.countdownTime || 30;
+                document.getElementById('footerText').value = data.footer?.text || '';
+
+                // --- ফাইল কার্ড লোড করার কোড পরিবর্তন করা হয়েছে ---
+                fileCardsContainer.innerHTML = ''; // প্রথমে কন্টেইনার খালি করা হচ্ছে
+                if (data.fileCards && Array.isArray(data.fileCards)) {
+                    data.fileCards.forEach((card, index) => {
+                        const cardElement = createFileCardHTML(card, index);
+                        fileCardsContainer.appendChild(cardElement);
+                    });
                 }
-            }).catch((error) => console.error(error));
-        }
-
-        // Image upload helper
-        async function uploadImage(file, path) {
-            if (!file) return null;
-            const fileRef = storageRef(storage, path);
-            const snapshot = await uploadBytes(fileRef, file);
-            return await getDownloadURL(snapshot.ref);
-        }
-
-        // Save data to Firebase
-        appForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            loader.style.display = 'block';
-            try {
-                const profilePicUrl = await uploadImage(document.getElementById('profilePicUpload').files[0], 'images/profile.jpg') || document.getElementById('profilePicUrl').value;
-                const slider1Url = await uploadImage(document.getElementById('slider1Upload').files[0], 'images/slider1.jpg') || document.getElementById('slider1Url').value;
-                const slider2Url = await uploadImage(document.getElementById('slider2Upload').files[0], 'images/slider2.jpg') || document.getElementById('slider2Url').value;
-                const slider3Url = await uploadImage(document.getElementById('slider3Upload').files[0], 'images/slider3.jpg') || document.getElementById('slider3Url').value;
-
-                const fileCards = {};
-                for (let i = 1; i <= 4; i++) {
-                    const title = document.getElementById(`cardTitle${i}`).value;
-                    if(title) {
-                        const cardImgUrl = await uploadImage(document.getElementById(`cardImgUpload${i}`).files[0], `images/card${i}.jpg`) || document.getElementById(`cardImgUrl${i}`).value;
-                        fileCards[`card${i}`] = {
-                            title: title,
-                            description: document.getElementById(`cardDesc${i}`).value,
-                            downloadLink: document.getElementById(`cardLink${i}`).value,
-                            imageUrl: cardImgUrl,
-                        };
-                    }
-                }
-
-                const dataToSave = {
-                    profile: { name: document.getElementById('profileName').value, description: document.getElementById('profileDesc').value, imageUrl: profilePicUrl },
-                    ads: { bannerCode: document.getElementById('adCode').value },
-                    slider: { slide1: slider1Url, slide2: slider2Url, slide3: slider3Url },
-                    settings: { requiredClicks: parseInt(document.getElementById('requiredClicks').value), countdownTime: parseInt(document.getElementById('countdownTime').value) },
-                    fileCards: fileCards,
-                    footer: { text: document.getElementById('footerText').value }
-                };
-
-                await set(ref(db, 'appData'), dataToSave);
-                alert('Data saved successfully!');
-            } catch (error) {
-                console.error("Error saving data: ", error);
-                alert('Error saving data. Check console for details.');
-            } finally {
-                loader.style.display = 'none';
             }
-        });
-    </script>
+        }).catch((error) => console.error(error));
+    }
+
+    // Image upload helper
+    async function uploadImage(file, path) {
+        if (!file) return null;
+        const fileRef = storageRef(storage, path);
+        const snapshot = await uploadBytes(fileRef, file);
+        return await getDownloadURL(snapshot.ref);
+    }
+
+    // Save data to Firebase
+    appForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loader.style.display = 'block';
+        try {
+            const profilePicUrl = await uploadImage(document.getElementById('profilePicUpload').files[0], 'images/profile.jpg') || document.getElementById('profilePicUrl').value;
+            const slider1Url = await uploadImage(document.getElementById('slider1Upload').files[0], 'images/slider1.jpg') || document.getElementById('slider1Url').value;
+            const slider2Url = await uploadImage(document.getElementById('slider2Upload').files[0], 'images/slider2.jpg') || document.getElementById('slider2Url').value;
+            const slider3Url = await uploadImage(document.getElementById('slider3Upload').files[0], 'images/slider3.jpg') || document.getElementById('slider3Url').value;
+
+            // --- ফাইল কার্ড সেভ করার সম্পূর্ণ নতুন লজিক ---
+            const fileCards = [];
+            const cardElements = document.querySelectorAll('#fileCardsContainer .file-card-admin');
+            
+            for (let i = 0; i < cardElements.length; i++) {
+                const cardElement = cardElements[i];
+                const title = cardElement.querySelector('.card-title').value;
+                
+                // শুধুমাত্র টাইটেল থাকলেই কার্ডটি সেভ হবে
+                if (title) {
+                    const newImageFile = cardElement.querySelector('.card-img-upload').files[0];
+                    const existingImageUrl = cardElement.querySelector('.card-img-url').value;
+                    
+                    // নতুন ইমেজ আপলোড করা হলে সেটির URL ব্যবহার হবে, নাহলে আগের URL টি থাকবে
+                    const cardImgUrl = await uploadImage(newImageFile, `images/card_${Date.now()}_${i}.jpg`) || existingImageUrl;
+                    
+                    fileCards.push({
+                        title: title,
+                        description: cardElement.querySelector('.card-desc').value,
+                        downloadLink: cardElement.querySelector('.card-link').value,
+                        imageUrl: cardImgUrl,
+                    });
+                }
+            }
+
+            const dataToSave = {
+                profile: { name: document.getElementById('profileName').value, description: document.getElementById('profileDesc').value, imageUrl: profilePicUrl },
+                ads: { bannerCode: document.getElementById('adCode').value },
+                slider: { slide1: slider1Url, slide2: slider2Url, slide3: slider3Url },
+                settings: { requiredClicks: parseInt(document.getElementById('requiredClicks').value), countdownTime: parseInt(document.getElementById('countdownTime').value) },
+                fileCards: fileCards, // এখানে নতুন Array টি যুক্ত করা হয়েছে
+                footer: { text: document.getElementById('footerText').value }
+            };
+
+            await set(ref(db, 'appData'), dataToSave);
+            alert('Data saved successfully!');
+            loadData(); // ডেটা সেভ করার পর আবার লোড করা হচ্ছে যাতে সবকিছু ঠিকঠাক দেখায়
+        } catch (error) {
+            console.error("Error saving data: ", error);
+            alert('Error saving data. Check console for details.');
+        } finally {
+            loader.style.display = 'none';
+        }
+    });
+</script>
 </body>
 </html>
