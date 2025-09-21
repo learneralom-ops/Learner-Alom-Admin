@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learner Alom Admin</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #34026c; border-bottom: 2px solid #9953ff; padding-bottom: 10px; }
+        .login-form, .admin-panel { display: none; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="url"], input[type="number"], textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { min-height: 80px; resize: vertical; }
+        button { background: #9953ff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
+        button:hover { background: #34026c; }
+        #logoutBtn { background: #dc3545; }
+        .loader { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; text-align: center; padding-top: 45vh; color: white; font-size: 24px; }
+        fieldset { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+        legend { font-weight: bold; color: #9953ff; }
+        .file-card-admin { background: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Learner Alom Admin</h1>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="login-form">
+            <h2>Login</h2>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" required>
+            </div>
+            <button id="loginBtn">Login</button>
+            <p id="loginError" style="color: red;"></p>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="adminPanel" class="admin-panel">
+            <button id="logoutBtn" style="float: right;">Logout</button>
+            <h2>Settings</h2>
+            
+            <form id="appForm">
+                <fieldset>
+                    <legend>Profile Info</legend>
+                    <div class="form-group">
+                        <label for="profileName">Profile Name:</label>
+                        <input type="text" id="profileName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="profileDesc">Description:</label>
+                        <textarea id="profileDesc" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="profilePic">Profile Picture (URL or Upload):</label>
+                        <input type="text" id="profilePicUrl" placeholder="Enter image URL">
+                        <input type="file" id="profilePicUpload" accept="image/*">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Ad Codes</legend>
+                    <div class="form-group">
+                        <label for="adCode">Monetag/Adsterra Banner Ad HTML Code:</label>
+                        <textarea id="adCode" placeholder="Paste your full ad code here..."></textarea>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Image Slider</legend>
+                    <div class="form-group">
+                        <label for="slider1">Slider Image 1 (URL or Upload):</label>
+                        <input type="text" id="slider1Url"> <input type="file" id="slider1Upload" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label for="slider2">Slider Image 2 (URL or Upload):</label>
+                        <input type="text" id="slider2Url"> <input type="file" id="slider2Upload" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label for="slider3">Slider Image 3 (URL or Upload):</label>
+                        <input type="text" id="slider3Url"> <input type="file" id="slider3Upload" accept="image/*">
+                    </div>
+                </fieldset>
+                
+                <fieldset>
+                    <legend>Unlock Settings</legend>
+                     <div class="form-group">
+                        <label for="requiredClicks">Required Clicks to Unlock:</label>
+                        <input type="number" id="requiredClicks" value="10" required>
+                    </div>
+                     <div class="form-group">
+                        <label for="countdownTime">Countdown Time (seconds):</label>
+                        <input type="number" id="countdownTime" value="30" required>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>File Cards (Max 4)</legend>
+                    <div id="fileCardsContainer">
+                        <!-- File card forms will be generated here -->
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Footer</legend>
+                    <div class="form-group">
+                        <label for="footerText">Footer Text:</label>
+                        <input type="text" id="footerText" required>
+                    </div>
+                </fieldset>
+
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+    </div>
+    <div class="loader" id="loader">Saving...</div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+
+    <script>
+        // --- START: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
+        const firebaseConfig = {
+  apiKey: "AIzaSyCQvwxezeFwUW-8iuGqKn6Vzx8fqA-lq8w",
+  authDomain: "learner-alom.firebaseapp.com",
+  projectId: "learner-alom",
+  storageBucket: "learner-alom.firebasestorage.app",
+  messagingSenderId: "812834864427",
+  appId: "1:812834864427:web:c1d1a2fc89c59c30cb596e"
+};
+        // --- END: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
+
+        // Firebase Initialization
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.getAuth(app);
+        const db = firebase.getDatabase(app);
+        const storage = firebase.getStorage(app);
+
+        // DOM Elements
+        const loginForm = document.getElementById('loginForm');
+        const adminPanel = document.getElementById('adminPanel');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const appForm = document.getElementById('appForm');
+        const loader = document.getElementById('loader');
+
+        // Check auth state
+        firebase.onAuthStateChanged(auth, user => {
+            if (user) {
+                loginForm.style.display = 'none';
+                adminPanel.style.display = 'block';
+                loadData();
+            } else {
+                loginForm.style.display = 'block';
+                adminPanel.style.display = 'none';
+            }
+        });
+
+        // Login
+        loginBtn.addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            firebase.signInWithEmailAndPassword(auth, email, password)
+                .catch(error => {
+                    document.getElementById('loginError').textContent = error.message;
+                });
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            firebase.signOut(auth);
+        });
+        
+        // Generate File Card Inputs
+        const fileCardsContainer = document.getElementById('fileCardsContainer');
+        for (let i = 1; i <= 4; i++) {
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'file-card-admin';
+            cardDiv.innerHTML = `
+                <h4>Card ${i}</h4>
+                <div class="form-group">
+                    <label>Title:</label>
+                    <input type="text" id="cardTitle${i}">
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <textarea id="cardDesc${i}"></textarea>
+                </div>
+                 <div class="form-group">
+                    <label>Download Link:</label>
+                    <input type="url" id="cardLink${i}" placeholder="https://drive.google.com/...">
+                </div>
+                <div class="form-group">
+                    <label>Image (URL or Upload):</label>
+                    <input type="text" id="cardImgUrl${i}"><input type="file" id="cardImgUpload${i}" accept="image/*">
+                </div>
+            `;
+            fileCardsContainer.appendChild(cardDiv);
+        }
+
+        // Load data from Firebase
+        function loadData() {
+            const dataRef = firebase.ref(db, 'appData');
+            firebase.get(dataRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    // Populate form fields
+                    document.getElementById('profileName').value = data.profile?.name || '';
+                    document.getElementById('profileDesc').value = data.profile?.description || '';
+                    document.getElementById('profilePicUrl').value = data.profile?.imageUrl || '';
+                    document.getElementById('adCode').value = data.ads?.bannerCode || '';
+                    document.getElementById('slider1Url').value = data.slider?.slide1 || '';
+                    document.getElementById('slider2Url').value = data.slider?.slide2 || '';
+                    document.getElementById('slider3Url').value = data.slider?.slide3 || '';
+                    document.getElementById('requiredClicks').value = data.settings?.requiredClicks || 10;
+                    document.getElementById('countdownTime').value = data.settings?.countdownTime || 30;
+                    document.getElementById('footerText').value = data.footer?.text || '';
+
+                    // Populate file cards
+                    for (let i = 1; i <= 4; i++) {
+                         if(data.fileCards && data.fileCards[`card${i}`]) {
+                            const card = data.fileCards[`card${i}`];
+                            document.getElementById(`cardTitle${i}`).value = card.title || '';
+                            document.getElementById(`cardDesc${i}`).value = card.description || '';
+                            document.getElementById(`cardLink${i}`).value = card.downloadLink || '';
+                            document.getElementById(`cardImgUrl${i}`).value = card.imageUrl || '';
+                         }
+                    }
+                } else {
+                    console.log("No data available. You can save for the first time.");
+                }
+            }).catch((error) => {
+                console.error(error);
+                alert("Error loading data!");
+            });
+        }
+
+        // Image upload helper
+        async function uploadImage(file, path) {
+            if (!file) return null;
+            const storageRef = firebase.ref(storage, path);
+            const snapshot = await firebase.uploadBytes(storageRef, file);
+            return await firebase.getDownloadURL(snapshot.ref);
+        }
+
+        // Save data to Firebase
+        appForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loader.style.display = 'block';
+
+            try {
+                // Upload images and get URLs
+                const profilePicFile = document.getElementById('profilePicUpload').files[0];
+                const slider1File = document.getElementById('slider1Upload').files[0];
+                const slider2File = document.getElementById('slider2Upload').files[0];
+                const slider3File = document.getElementById('slider3Upload').files[0];
+
+                const profilePicUrl = await uploadImage(profilePicFile, 'images/profile.jpg') || document.getElementById('profilePicUrl').value;
+                const slider1Url = await uploadImage(slider1File, 'images/slider1.jpg') || document.getElementById('slider1Url').value;
+                const slider2Url = await uploadImage(slider2File, 'images/slider2.jpg') || document.getElementById('slider2Url').value;
+                const slider3Url = await uploadImage(slider3File, 'images/slider3.jpg') || document.getElementById('slider3Url').value;
+
+                // Collect card data
+                const fileCards = {};
+                for (let i = 1; i <= 4; i++) {
+                    const title = document.getElementById(`cardTitle${i}`).value;
+                    if(title) { // Only save card if it has a title
+                        const cardImgFile = document.getElementById(`cardImgUpload${i}`).files[0];
+                        const cardImgUrl = await uploadImage(cardImgFile, `images/card${i}.jpg`) || document.getElementById(`cardImgUrl${i}`).value;
+                        
+                        fileCards[`card${i}`] = {
+                            title: title,
+                            description: document.getElementById(`cardDesc${i}`).value,
+                            downloadLink: document.getElementById(`cardLink${i}`).value,
+                            imageUrl: cardImgUrl,
+                        };
+                    }
+                }
+
+                const dataToSave = {
+                    profile: {
+                        name: document.getElementById('profileName').value,
+                        description: document.getElementById('profileDesc').value,
+                        imageUrl: profilePicUrl
+                    },
+                    ads: {
+                        bannerCode: document.getElementById('adCode').value
+                    },
+                    slider: {
+                        slide1: slider1Url,
+                        slide2: slider2Url,
+                        slide3: slider3Url,
+                    },
+                    settings: {
+                        requiredClicks: parseInt(document.getElementById('requiredClicks').value),
+                        countdownTime: parseInt(document.getElementById('countdownTime').value)
+                    },
+                    fileCards: fileCards,
+                    footer: {
+                        text: document.getElementById('footerText').value
+                    }
+                };
+
+                const dataRef = firebase.ref(db, 'appData');
+                await firebase.set(dataRef, dataToSave);
+                alert('Data saved successfully!');
+            } catch (error) {
+                console.error("Error saving data: ", error);
+                alert('Error saving data. Check console for details.');
+            } finally {
+                loader.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
