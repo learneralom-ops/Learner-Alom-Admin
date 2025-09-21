@@ -129,16 +129,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
 
     <script>
-        // --- START: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
+        // --- আপনার দেওয়া Firebase Config ---
         const firebaseConfig = {
-  apiKey: "AIzaSyCQvwxezeFwUW-8iuGqKn6Vzx8fqA-lq8w",
-  authDomain: "learner-alom.firebaseapp.com",
-  projectId: "learner-alom",
-  storageBucket: "learner-alom.appspot.com",
-  messagingSenderId: "812834864427",
-  appId: "1:812834864427:web:c1d1a2fc89c59c30cb596e"
-};
-        // --- END: আপনার FIREBASE CONFIG এখানে পেস্ট করুন ---
+          apiKey: "AIzaSyCQvwxezeFwUW-8iuGqKn6Vzx8fqA-lq8w",
+          authDomain: "learner-alom.firebaseapp.com",
+          databaseURL: "https://learner-alom-default-rtdb.firebaseio.com",
+          projectId: "learner-alom",
+          storageBucket: "learner-alom.appspot.com", // .firebasestorage.app নয়, .appspot.com হবে
+          messagingSenderId: "812834864427",
+          appId: "1:812834864427:web:c1d1a2fc89c59c30cb596e"
+        };
+        // --- Config শেষ ---
 
         // Firebase Initialization
         const app = firebase.initializeApp(firebaseConfig);
@@ -170,6 +171,7 @@
         loginBtn.addEventListener('click', () => {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            document.getElementById('loginError').textContent = ''; // Clear previous error
             firebase.signInWithEmailAndPassword(auth, email, password)
                 .catch(error => {
                     document.getElementById('loginError').textContent = error.message;
